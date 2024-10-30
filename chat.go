@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"reflect"
 )
 
 // Chat message role defined by the OpenAI API.
@@ -358,6 +359,21 @@ type ChatCompletionChoice struct {
 	FinishReason         FinishReason         `json:"finish_reason"`
 	LogProbs             *LogProbs            `json:"logprobs,omitempty"`
 	ContentFilterResults ContentFilterResults `json:"content_filter_results,omitempty"`
+}
+
+func (c *ChatCompletionChoice) MarshalJSON() ([]byte, error) {
+	type Alias ChatCompletionChoice
+	var contentFilterResults *ContentFilterResults
+	if !reflect.ValueOf(c.ContentFilterResults).IsZero() {
+		contentFilterResults = &c.ContentFilterResults
+	}
+	return json.Marshal(&struct {
+		ContentFilterResults *ContentFilterResults `json:"content_filter_results,omitempty"`
+		*Alias
+	}{
+		ContentFilterResults: contentFilterResults,
+		Alias:                (*Alias)(c),
+	})
 }
 
 // ChatCompletionResponse represents a response structure for chat completion API.

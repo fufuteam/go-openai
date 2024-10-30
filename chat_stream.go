@@ -2,7 +2,9 @@ package openai
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
+	"reflect"
 )
 
 type ChatCompletionStreamChoiceDelta struct {
@@ -39,9 +41,39 @@ type ChatCompletionStreamChoice struct {
 	ContentFilterResults ContentFilterResults                `json:"content_filter_results,omitempty"`
 }
 
+func (c *ChatCompletionStreamChoice) MarshalJSON() ([]byte, error) {
+	type Alias ChatCompletionStreamChoice
+	var contentFilterResults *ContentFilterResults
+	if !reflect.ValueOf(c.ContentFilterResults).IsZero() {
+		contentFilterResults = &c.ContentFilterResults
+	}
+	return json.Marshal(&struct {
+		ContentFilterResults *ContentFilterResults `json:"content_filter_results,omitempty"`
+		*Alias
+	}{
+		ContentFilterResults: contentFilterResults,
+		Alias:                (*Alias)(c),
+	})
+}
+
 type PromptFilterResult struct {
 	Index                int                  `json:"index"`
 	ContentFilterResults ContentFilterResults `json:"content_filter_results,omitempty"`
+}
+
+func (p *PromptFilterResult) MarshalJSON() ([]byte, error) {
+	type Alias PromptFilterResult
+	var contentFilterResults *ContentFilterResults
+	if !reflect.ValueOf(p.ContentFilterResults).IsZero() {
+		contentFilterResults = &p.ContentFilterResults
+	}
+	return json.Marshal(&struct {
+		ContentFilterResults *ContentFilterResults `json:"content_filter_results,omitempty"`
+		*Alias
+	}{
+		ContentFilterResults: contentFilterResults,
+		Alias:                (*Alias)(p),
+	})
 }
 
 type ChatCompletionStreamResponse struct {

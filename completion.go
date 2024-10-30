@@ -2,8 +2,10 @@ package openai
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
+	"reflect"
 )
 
 var (
@@ -255,6 +257,8 @@ type CompletionRequest struct {
 	// incorrect: `"logit_bias":{"You": 6}`, correct: `"logit_bias":{"1639": 6}`
 	// refs: https://platform.openai.com/docs/api-reference/completions/create#completions/create-logit_bias
 	LogitBias map[string]int `json:"logit_bias,omitempty"`
+	// Options for streaming response. Only set this when you set stream: true.
+	StreamOptions *StreamOptions `json:"stream_options,omitempty"`
 	// Store can be set to true to store the output of this completion request for use in distillations and evals.
 	// https://platform.openai.com/docs/api-reference/chat/create#chat-create-store
 	Store bool `json:"store,omitempty"`
@@ -275,10 +279,10 @@ type CompletionRequest struct {
 
 // CompletionChoice represents one of possible completions.
 type CompletionChoice struct {
-	Text         string        `json:"text"`
-	Index        int           `json:"index"`
-	FinishReason string        `json:"finish_reason"`
-	LogProbs     LogprobResult `json:"logprobs"`
+	Text         string         `json:"text"`
+	Index        int            `json:"index"`
+	FinishReason string         `json:"finish_reason"`
+	LogProbs     *LogprobResult `json:"logprobs"`
 }
 
 // LogprobResult represents logprob result of Choice.
@@ -299,6 +303,21 @@ type CompletionResponse struct {
 	Usage   Usage              `json:"usage"`
 
 	httpHeader
+}
+
+func (c CompletionResponse) MarshalJSON() ([]byte, error) {
+	type Alias CompletionResponse
+	var usage *Usage
+	if !reflect.ValueOf(c.Usage).IsZero() {
+		usage = &c.Usage
+	}
+	return json.Marshal(&struct {
+		Usage *Usage `json:"usage,omitempty"`
+		Alias
+	}{
+		Usage: usage,
+		Alias: (Alias)(c),
+	})
 }
 
 // CreateCompletion — API call to create a completion. This is the main endpoint of the API. Returns new text as well
